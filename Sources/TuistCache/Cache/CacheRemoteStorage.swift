@@ -69,11 +69,11 @@ final class CacheRemoteStorage: CacheStoring {
                 print(xcframeworkPath.pathString)
 
                 var urlRequest = URLRequest(url: artefactToUploadURL)
-                urlRequest.httpMethod = "POST"
+                urlRequest.httpMethod = "PUT"
                 let result = try self.fileUploader.upload(file: destinationZipPath, with: urlRequest).map { obj, response in
                     print("String: \(obj)")
                     print("response: \(response)")
-                }.toBlocking().last()
+                }.toBlocking().materialize()
                 print(result)
                 // TODO: Download file at given url
             }.asCompletable()
