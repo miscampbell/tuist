@@ -30,6 +30,7 @@ public enum HTTPRequestDispatcherError: LocalizedError {
 
 public protocol HTTPRequestDispatching {
     func dispatch<T, E: Error>(resource: HTTPResource<T, E>) -> Single<(object: T, response: HTTPURLResponse)>
+    func upload(fileURL: URL, with request: URLRequest) -> Single<(object: String, response: HTTPURLResponse)>
 }
 
 public final class HTTPRequestDispatcher: HTTPRequestDispatching {
@@ -67,6 +68,30 @@ public final class HTTPRequestDispatcher: HTTPRequestDispatching {
             })
             task.resume()
 
+            return Disposables.create {
+                task.cancel()
+            }
+        }
+    }
+
+    public func upload(fileURL: URL, with request: URLRequest) -> Single<(object: String, response: HTTPURLResponse)> {
+        Single.create { observer in
+            let task = self.session.uploadTask(with: request, fromFile: fileURL) { data, response, error in
+                if let error = error {
+                    observer(.error(HTTPRequestDispatcherError.urlSessionError(error)))
+                } else if let data = data, let response = response as? HTTPURLResponse {
+                    switch response.statusCode {
+                    case 200 ..< 300:
+                        let objectString = String(data: data, encoding: .utf8) ?? "-"
+                        observer(.success((object: objectString, response: response)))
+                    default: // Error
+                        observer(.error(HTTPRequestDispatcherError.serverSideError("error", response)))
+                    }
+                } else {
+                    observer(.error(HTTPRequestDispatcherError.invalidResponse))
+                }
+            }
+            task.resume()
             return Disposables.create {
                 task.cancel()
             }

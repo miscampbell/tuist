@@ -16,8 +16,7 @@ public struct HTTPResource<T, E: Error>: Equatable, Hashable, CustomStringConver
     public func withURL(_ url: URL) -> HTTPResource<T, E> {
         HTTPResource(request: {
             URLRequest(url: url)
-        }, parse: parse,
-                     parseError: parseError)
+        }, parse: parse, parseError: parseError)
     }
 
     public func mappingRequest(_ requestMapper: @escaping (URLRequest) throws -> URLRequest) throws -> HTTPResource<T, E> {
