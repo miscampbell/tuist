@@ -55,28 +55,23 @@ final class CacheRemoteStorage: CacheStoring {
     func store(hash: String, config: Config, xcframeworkPath: AbsolutePath) -> Completable {
         do {
             let destinationZipPath = try zip(xcframeworkPath: xcframeworkPath, hash: hash)
+            
+            let md5 = try destinationZipPath.md5()
+            let utf8str = md5.data(using: .utf8)
+            let aBase64md5 = utf8str?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0)) ?? ""
+            
             let resource = try CloudCacheResponse.storeResource(
                 hash: hash,
                 config: config,
-                content_md5: try destinationZipPath.md5()
+                content_md5: aBase64md5
             )
             
-            return cloudClient.request(resource).map { responseTuple in
-                let cacheResponse = responseTuple.object.data
-                let artefactToUploadURL = cacheResponse.url
-                print(artefactToUploadURL)
-                print("---")
-                print(xcframeworkPath.pathString)
-
-                var urlRequest = URLRequest(url: artefactToUploadURL)
-                urlRequest.httpMethod = "PUT"
-                let result = try self.fileUploader.upload(file: destinationZipPath, with: urlRequest).map { obj, response in
-                    print("String: \(obj)")
-                    print("response: \(response)")
-                }.toBlocking().materialize()
-                print(result)
-                // TODO: Download file at given url
-            }.asCompletable()
+            return cloudClient.request(resource).map { (responseTuple) -> URL in
+                responseTuple.object.data.url
+            }
+            .flatMapCompletable({ (url: URL) in
+                self.fileUploader.upload(file: destinationZipPath, hash: hash, to: url).asCompletable()
+            })
         } catch {
             return Completable.error(error)
         }

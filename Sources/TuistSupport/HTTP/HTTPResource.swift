@@ -51,8 +51,14 @@ extension HTTPResource where T: Decodable, E: Decodable {
     public static func jsonResource(request: @escaping () -> URLRequest) -> HTTPResource<T, E> {
         jsonResource(request: request, parseError: decode)
     }
+    
+    public static func jsonResource(request: @escaping () -> URLRequest,
+                                    parse: @escaping (Data, HTTPURLResponse) throws -> T) -> HTTPResource<T, E> {
+        jsonResource(request: request, parseError: decode)
+    }
 
-    public static func jsonResource(request: @escaping () -> URLRequest, parseError: @escaping (Data, HTTPURLResponse) throws -> E) -> HTTPResource<T, E> {
+    public static func jsonResource(request: @escaping () -> URLRequest,
+                                    parseError: @escaping (Data, HTTPURLResponse) throws -> E) -> HTTPResource<T, E> {
         HTTPResource(request: request, parse: decode, parseError: parseError)
     }
 
